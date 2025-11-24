@@ -1,11 +1,13 @@
+// Force server runtime and disable static rendering
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export const revalidate = 0;
+
 import dbConnect from "@/lib/db";
 import Comment from "@/models/Comment";
 import News from "@/models/News";
-import mongoose from "mongoose";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
+// GET: Fetch all comments with user + post populated
 export async function GET() {
   await dbConnect();
 
@@ -21,16 +23,17 @@ export async function GET() {
   return Response.json({ success: true, data: comments });
 }
 
+// PATCH: Update comment status
 export async function PATCH(req) {
   await dbConnect();
 
   const { id, status } = await req.json();
-
   const updated = await Comment.findByIdAndUpdate(id, { status }, { new: true });
 
   return Response.json({ success: true, data: updated });
 }
 
+// DELETE: Remove a comment
 export async function DELETE(req) {
   await dbConnect();
 
