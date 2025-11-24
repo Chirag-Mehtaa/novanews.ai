@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";  // optional but recommended
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import GlobeFeed from '@/models/GlobeFeed';
