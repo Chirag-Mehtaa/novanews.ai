@@ -1,17 +1,21 @@
 import React from 'react';
-import CategoryClient from './CategoryClient'; // ⚠️ Dhyan de: Agar CategoryClient kisi aur folder me hai to path sahi kar lena
+import CategoryClient from './CategoryClient';
+
+// 🔥 FIX 1: Page ko dynamic banaya taaki build time par error na aaye
+export const dynamic = 'force-dynamic';
 
 // --- SERVER SIDE DATA FETCHING ---
 async function getNews() {
   try {
-    // API URL set karna zaroori hai server side fetch ke liye
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    // 🔥 FIX 2: URL Logic sudhara hai. 
+    // Netlify par 'NEXTAUTH_URL' ya 'URL' use karega, local par localhost.
+    const baseUrl = process.env.NEXTAUTH_URL || process.env.URL || 'http://localhost:3000';
     
-    console.log("Fetching News from Server (Cache: 30 mins)..."); 
+    console.log(`Fetching News from: ${baseUrl}...`); 
 
-    // 🔥 30 Minute Cache (1800 Seconds)
-    const res = await fetch(`${apiUrl}/api/admin/news`, { 
-      next: { revalidate: 1800 } 
+    // 🔥 FIX 3: 'no-store' lagaya hai taaki data guaranteed aaye (Caching issue hatane ke liye)
+    const res = await fetch(`${baseUrl}/api/admin/news`, { 
+      cache: 'no-store'
     });
     
     if (!res.ok) {
@@ -25,11 +29,11 @@ async function getNews() {
     if (data.success && data.data) newsData = data.data;
     else if (Array.isArray(data)) newsData = data;
 
-    // Data format clean kar rahe hain taaki client ko error na aaye
+    // Data format clean kar rahe hain taaki client ko error na aaye (Tera original logic)
     return newsData.map(item => ({
         ...item,
         category: Array.isArray(item.category) ? item.category : [item.category],
-        _id: item._id.toString() // ID ko string bana lete hain safety ke liye
+        _id: item._id.toString()
     }));
 
   } catch (error) {

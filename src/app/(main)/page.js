@@ -7,18 +7,25 @@ import {
 import ThreeJSGlobe from '@/components/globe/ThreeJSGlobe'; 
 import { NewsTicker } from '@/components/news/NewsTicker'; 
 
-// --- 1. DATA FETCHING (Server Side with Caching) ---
+// 🔥 IMPORTANT: Ye line zaroori hai taaki Next.js purana/empty data cache na kare
+export const dynamic = 'force-dynamic';
+
+// --- 1. DATA FETCHING (Server Side via API) ---
 async function getHomeData() {
   try {
+    // ⚠️ Netlify par ye variable set hona zaroori hai (Niche instruction dekho)
     const apiUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
     
-    // 🔥 FIX: 'no-store' hataya aur 'revalidate: 60' lagaya.
-    // Ab ye data 60 second tak cache rahega = INSTANT LOAD.
+    // Fetch call to your API
     const res = await fetch(`${apiUrl}/api/public/home`, { 
-      next: { revalidate: 60 } 
+      next: { revalidate: 60 }, // 60 seconds cache
+      cache: 'no-store'         // Ensure fresh data
     });
     
-    if (!res.ok) return null;
+    if (!res.ok) {
+        console.error("API Response not OK:", res.status);
+        return null;
+    }
     return res.json();
   } catch (error) {
     console.error("Fetch Error:", error);
@@ -26,7 +33,7 @@ async function getHomeData() {
   }
 }
 
-// --- 2. MARKET STRIP ---
+// --- 2. MARKET STRIP (Same as your request) ---
 const marketData = [
   { symbol: "BTC", price: "$94,230", change: "+2.4%", up: true },
   { symbol: "ETH", price: "$3,450", change: "+1.1%", up: true },
@@ -61,7 +68,7 @@ const MarketStrip = () => {
   );
 };
 
-// --- 3. NOVA PRO AD ---
+// --- 3. NOVA PRO AD (Same as your request) ---
 const NovaProAd = () => (
   <div className="relative w-full rounded-3xl overflow-hidden my-20 group cursor-pointer border border-white/10">
     <div className="absolute inset-0 bg-gradient-to-r from-purple-900 via-blue-900 to-teal-900 animate-gradient-x opacity-80"></div>
@@ -96,7 +103,7 @@ const NovaProAd = () => (
   </div>
 );
 
-// --- 4. MAIN PAGE LAYOUT ---
+// --- 4. MAIN PAGE LAYOUT (Same as your request) ---
 export default async function HomePage() {
   // Fetch Data
   const response = await getHomeData();
@@ -138,16 +145,17 @@ export default async function HomePage() {
                 </a>
               </div>
               <div className="mt-12 flex justify-center lg:justify-start items-center gap-8 text-sm text-gray-400 font-mono">
-                 <div><span className="block text-2xl font-bold text-white">{data.globe.length}</span><span>Active Hotspots</span></div>
-                 <div className="w-px h-8 bg-white/10"></div>
-                 <div><span className="block text-2xl font-bold text-white">24/7</span><span>AI Coverage</span></div>
+                  <div><span className="block text-2xl font-bold text-white">{data.globe.length}</span><span>Active Hotspots</span></div>
+                  <div className="w-px h-8 bg-white/10"></div>
+                  <div><span className="block text-2xl font-bold text-white">24/7</span><span>AI Coverage</span></div>
               </div>
             </div>
 
             {/* 3D Globe */}
             <div className="lg:w-1/2 h-[50vh] lg:h-[600px] w-full relative mt-10 lg:mt-0 flex items-center justify-center">
                <div className="w-full h-full relative z-10">
-                  <ThreeJSGlobe newsData={data.globe} /> 
+                 {/* Pass Globe Data here */}
+                 <ThreeJSGlobe newsData={data.globe} /> 
                </div>
                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100%] h-[100%] bg-blue-500/20 rounded-full blur-[120px] -z-10 pointer-events-none"></div>
             </div>
@@ -176,7 +184,6 @@ export default async function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:h-[550px]">
-            
             {/* FEATURED CARD (1st Article) */}
             {featuredStory ? (
             <Link href={`/news/${featuredStory.slug}`} className="lg:col-span-7 relative group rounded-3xl overflow-hidden border border-white/10 bg-gray-900 shadow-2xl h-96 lg:h-full">
@@ -194,7 +201,7 @@ export default async function HomePage() {
             </Link>
             ) : (
               <div className="lg:col-span-7 h-full flex items-center justify-center border border-white/10 rounded-3xl text-gray-500 bg-white/5">
-                 No Featured News Available
+                  No Featured News Available
               </div>
             )}
 
@@ -218,14 +225,12 @@ export default async function HomePage() {
                     </div>
                  </Link>
                ))}
-               
                <div className="flex-1 bg-gradient-to-br from-blue-900/20 to-purple-900/20 rounded-2xl border border-white/10 p-5 flex items-center justify-between">
                   <div><h4 className="text-white font-bold text-lg mb-1">Daily Briefing</h4><p className="text-xs text-gray-400">Subscribe for alerts.</p></div>
                   <button className="bg-white/10 hover:bg-white hover:text-[#0A192F] text-white p-3 rounded-full transition-all border border-white/10"><Bell size={20} /></button>
                </div>
             </div>
         </div>
-
         <NovaProAd />
       </div>
     </div>
