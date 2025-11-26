@@ -7,24 +7,37 @@ import {
 import ThreeJSGlobe from '@/components/globe/ThreeJSGlobe'; 
 import { NewsTicker } from '@/components/news/NewsTicker'; 
 
-// 🔥 IMPORTANT: Ye line zaroori hai taaki Next.js purana/empty data cache na kare
+// 🔥 FIX 1: Ye line zaroori hai taaki Netlify is page ko freeze na kare (Live Data)
 export const dynamic = 'force-dynamic';
 
-// --- 1. DATA FETCHING (Server Side via API) ---
+// --- HELPER: Automatically Detect URL ---
+const getBaseUrl = () => {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  if (process.env.NEXTAUTH_URL) {
+    return process.env.NEXTAUTH_URL;
+  }
+  if (process.env.URL) {
+    return process.env.URL; // Netlify ka default URL
+  }
+  return 'http://localhost:3000';
+};
+
+// --- 1. DATA FETCHING (Server Side) ---
 async function getHomeData() {
   try {
-    // ⚠️ Netlify par ye variable set hona zaroori hai (Niche instruction dekho)
-    const apiUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-    
-    // Fetch call to your API
+    const apiUrl = getBaseUrl();
+    console.log(`Fetching data from: ${apiUrl}`); // Logs me dikhega kahan call ja rahi hai
+
+    // 🔥 FIX 2: 'no-store' ensure karta hai ki data hamesha naya mile
     const res = await fetch(`${apiUrl}/api/public/home`, { 
-      next: { revalidate: 60 }, // 60 seconds cache
-      cache: 'no-store'         // Ensure fresh data
+      cache: 'no-store' 
     });
     
     if (!res.ok) {
-        console.error("API Response not OK:", res.status);
-        return null;
+      console.error(`Failed to fetch: ${res.status} ${res.statusText}`);
+      return null;
     }
     return res.json();
   } catch (error) {
@@ -33,7 +46,7 @@ async function getHomeData() {
   }
 }
 
-// --- 2. MARKET STRIP (Same as your request) ---
+// --- 2. MARKET STRIP (Same as before) ---
 const marketData = [
   { symbol: "BTC", price: "$94,230", change: "+2.4%", up: true },
   { symbol: "ETH", price: "$3,450", change: "+1.1%", up: true },
@@ -68,7 +81,7 @@ const MarketStrip = () => {
   );
 };
 
-// --- 3. NOVA PRO AD (Same as your request) ---
+// --- 3. NOVA PRO AD (Same as before) ---
 const NovaProAd = () => (
   <div className="relative w-full rounded-3xl overflow-hidden my-20 group cursor-pointer border border-white/10">
     <div className="absolute inset-0 bg-gradient-to-r from-purple-900 via-blue-900 to-teal-900 animate-gradient-x opacity-80"></div>
@@ -103,9 +116,9 @@ const NovaProAd = () => (
   </div>
 );
 
-// --- 4. MAIN PAGE LAYOUT (Same as your request) ---
+// --- 4. MAIN PAGE LAYOUT ---
 export default async function HomePage() {
-  // Fetch Data
+  // Fetch Data (Ab ye sahi URL use karega)
   const response = await getHomeData();
   const data = response?.data || { globe: [], latest: [], technology: [] };
 
@@ -184,7 +197,7 @@ export default async function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:h-[550px]">
-            {/* FEATURED CARD (1st Article) */}
+            {/* FEATURED CARD */}
             {featuredStory ? (
             <Link href={`/news/${featuredStory.slug}`} className="lg:col-span-7 relative group rounded-3xl overflow-hidden border border-white/10 bg-gray-900 shadow-2xl h-96 lg:h-full">
                {featuredStory.imageUrl ? (
@@ -205,7 +218,7 @@ export default async function HomePage() {
               </div>
             )}
 
-            {/* SIDE STORIES (Next 3 Articles) */}
+            {/* SIDE STORIES */}
             <div className="lg:col-span-5 flex flex-col gap-4 h-full">
                {sideStories.map((story) => (
                  <Link href={`/news/${story.slug}`} key={story._id} className="flex-1 relative group rounded-2xl overflow-hidden bg-white/5 border border-white/10 hover:border-teal-400/30 transition-all min-h-[140px]">
