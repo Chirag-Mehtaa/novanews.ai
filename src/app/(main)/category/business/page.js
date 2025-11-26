@@ -1,30 +1,32 @@
 import NewsClient from './NewsClient'; // Import from above file
+// 👇 Ye 2 lines nayi hain (Direct DB ke liye)
+import { connectToDB } from "@/lib/db";
+import News from "@/models/News";
 
-// 1 Hour Cache Setup
+// --- SERVER SIDE DATA FETCHING (No API/Fetch needed) ---
 async function getNews() {
-  // IMPORTANT: Server component me Full URL chahiye hoti hai agar internal API hai.
-  // Agar external DB call hai to seedha DB call karna better hai.
-  // Yahan main dummy base url assume kar raha hu agar .env set nahi hai.
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'; 
-  
   try {
-    const res = await fetch(`${baseUrl}/api/admin/news`, {
-      next: { revalidate: 3600 } // <-- YE HAI 1 GHANTE KA CACHE MAGIC
-    });
-    
-    if (!res.ok) throw new Error('Failed to fetch data');
-    const data = await res.json();
-    
-    if (data.success && data.data) return data.data;
-    if (Array.isArray(data)) return data;
-    return [];
+    // 1. Database Connect karo
+    await connectToDB();
+
+    // 2. Direct Data nikalo (Koi URL/Localhost ki zaroorat nahi)
+    // Note: Maine yahan 'business' filter lagaya hai kyunki ye Business page hai.
+    // Agar tujhe saari news chahiye to .find({}) kar dena.
+    const rawNews = await News.find({ category: 'business' }).sort({ createdAt: -1 });
+
+    // 3. Data ko JSON mein convert karo (Next.js ke liye zaroori step)
+    const newsData = JSON.parse(JSON.stringify(rawNews));
+
+    return newsData;
+
   } catch (error) {
-    console.error("Fetch error:", error);
+    console.error("Database Error:", error);
     return [];
   }
 }
 
 export default async function BusinessNewsPage() {
+  // Page load hote hi DB se data aayega
   const newsData = await getNews();
   
   return <NewsClient initialNews={newsData} />;

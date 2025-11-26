@@ -1,40 +1,40 @@
 import React from 'react';
-import FeaturedClient from '@/components/news/FeaturedUI'; // Ensure UI component exists
+import FeaturedClient from '@/components/news/FeaturedUI'; 
+// 👇 Ye imports zaroori hain
+import { connectToDB } from "@/lib/db";
+import News from "@/models/News";
 
 // 🔥 CACHE SETTING: 30 Minutes (1800 Seconds)
-// Ab 30 minute tak server data refresh nahi karega, super fast load hoga.
+// Next.js DB calls ko bhi cache kar lega is setting ke saath
 export const revalidate = 1800; 
 
 async function getNews() {
   try {
-    const apiUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    // 👇 Fetch hata diya, direct DB connect kiya
+    await connectToDB();
     
-    // Fetch from API
-    const res = await fetch(`${apiUrl}/api/admin/news`, { 
-       next: { revalidate: 1800 } // 30 Min Cache here too
-    });
+    // Direct Data Query
+    // (Maine sort laga diya hai taaki latest news pehle aaye)
+    const rawNews = await News.find({}).sort({ createdAt: -1 });
 
-    if (!res.ok) return [];
-    const json = await res.json();
-    
-    let newsData = [];
-    if (json.success && json.data) newsData = json.data;
-    else if (Array.isArray(json)) newsData = json;
+    // Data ko JSON banaya
+    const newsData = JSON.parse(JSON.stringify(rawNews));
 
-    // Data Clean up
+    // 👇 Tera purana Data Clean up logic (Same to same)
     return newsData.map(item => ({
       ...item,
-      category: Array.isArray(item.category) ? item.category : [item.category]
+      category: Array.isArray(item.category) ? item.category : [item.category],
+      _id: item._id.toString() // ID safety
     }));
 
   } catch (error) {
-    console.error("Fetch Error:", error);
+    console.error("Database Error:", error);
     return [];
   }
 }
 
 export default async function FeaturedPage() {
-  // Server Side Data Fetching (Fast due to Cache)
+  // Server Side Data Fetching (Fast due to DB Call + Cache)
   const news = await getNews(); 
   
   // Pass data to Client Component

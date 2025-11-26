@@ -28,6 +28,7 @@ async function dbConnect() {
     };
 
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+      console.log("🔥 MongoDB Connected via Cached Connection");
       return mongoose;
     });
   }
@@ -42,5 +43,8 @@ async function dbConnect() {
   return cached.conn;
 }
 
-// 🔥 Ye line sabse zaruri hai, shayad ye miss ho gayi thi
+// 👇 IMPORTANT: Humne bas ye extra line add ki hai
+// Taaki tera purana code (dbConnect) bhi chale aur naya code (connectToDB) bhi chale.
+export const connectToDB = dbConnect; 
+
 export default dbConnect;
