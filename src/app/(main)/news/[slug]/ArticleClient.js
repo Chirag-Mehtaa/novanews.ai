@@ -7,8 +7,10 @@ import {
   Bot, Sparkles, Minus, TrendingUp, TrendingDown
 } from 'lucide-react';
 import Link from 'next/link';
-import { CommentSection } from './CommentSection'; // Path check kar lena
-import ScrollToTop from '@/components/ScrollToTop'; // Path check kar lena
+
+// 👇 FIX: Curly braces { } wapis laga diye hain
+import { CommentSection } from './CommentSection'; 
+import ScrollToTop from '@/components/ScrollToTop'; 
 
 // Helper to format date
 const formatDate = (dateString) => {
@@ -41,13 +43,13 @@ const SentimentBadge = ({ sentiment }) => {
 // --- AI Summary Component ---
 const AISummaryBox = ({ summary, sentiment }) => {
   return (
-    <div className="relative overflow-hidden rounded-xl border border-teal-accent/30 bg-navy-light/50 backdrop-blur-sm p-6 my-8 shadow-lg shadow-teal-accent/5">
-      <div className="absolute top-0 right-0 w-20 h-20 bg-teal-accent/10 rounded-bl-full -mr-10 -mt-10"></div>
-      <div className="absolute bottom-0 left-0 w-16 h-1 border-b-2 border-l-2 border-teal-accent/20 rounded-bl-xl"></div>
+    <div className="relative overflow-hidden rounded-xl border border-teal-400/30 bg-[#112240]/50 backdrop-blur-sm p-6 my-8 shadow-lg shadow-teal-400/5">
+      <div className="absolute top-0 right-0 w-20 h-20 bg-teal-400/10 rounded-bl-full -mr-10 -mt-10"></div>
+      <div className="absolute bottom-0 left-0 w-16 h-1 border-b-2 border-l-2 border-teal-400/20 rounded-bl-xl"></div>
 
       <div className="relative z-10">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-2 text-teal-accent">
+          <div className="flex items-center space-x-2 text-teal-400">
             <Bot className="w-6 h-6" />
             <span className="font-serif font-bold tracking-wider text-lg">NOVA AI INSIGHT</span>
           </div>
@@ -55,14 +57,14 @@ const AISummaryBox = ({ summary, sentiment }) => {
         </div>
 
         <div className="flex items-start space-x-3">
-          <Sparkles className="w-5 h-5 text-orange-accent mt-1 shrink-0 animate-pulse" />
-          <p className="text-text-primary text-lg leading-relaxed font-light text-gray-300">
+          <Sparkles className="w-5 h-5 text-orange-400 mt-1 shrink-0 animate-pulse" />
+          <p className="text-gray-300 text-lg leading-relaxed font-light">
             {summary}
           </p>
         </div>
         
         <div className="mt-4 flex justify-end">
-          <span className="text-xs text-teal-accent/60 font-mono">
+          <span className="text-xs text-teal-400/60 font-mono">
             PROCESSED BY NOVA-LLM-V4 • {new Date().toLocaleDateString()}
           </span>
         </div>
@@ -72,7 +74,10 @@ const AISummaryBox = ({ summary, sentiment }) => {
 };
 
 // --- Main Client Component ---
-export default function ArticleClient({ article }) {
+export default function ArticleClient({ news }) {
+  // Mapping prop 'news' to 'article' to match your design logic
+  const article = news;
+
   const [scrollProgress, setScrollProgress] = useState(0);
 
   // Scroll Progress Logic Only
@@ -86,7 +91,7 @@ export default function ArticleClient({ article }) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  if (!article) return null; // Should be handled by parent, but safety check
+  if (!article) return null; 
 
   return (
     <div className="min-h-screen bg-[#0A192F] text-[#E6F1FF] pt-24 pb-20 font-sans relative selection:bg-[#64FFDA]/30">
@@ -115,7 +120,9 @@ export default function ArticleClient({ article }) {
         {/* Article Header */}
         <header className="mb-10">
             <div className="flex items-center gap-3 mb-5">
-                <span className="px-3 py-1 bg-[#64FFDA] text-[#0A192F] text-xs font-bold uppercase tracking-widest rounded-sm shadow-lg shadow-[#64FFDA]/20">{article.category}</span>
+                <span className="px-3 py-1 bg-[#64FFDA] text-[#0A192F] text-xs font-bold uppercase tracking-widest rounded-sm shadow-lg shadow-[#64FFDA]/20">
+                    {Array.isArray(article.category) ? article.category[0] : article.category}
+                </span>
                 <span className="text-[#8892B0] text-xs flex items-center gap-1 font-medium"><Clock size={14} className="text-[#64FFDA]" /> {formatDate(article.createdAt)}</span>
             </div>
             <h1 className="text-3xl md:text-5xl font-serif font-bold text-white leading-tight mb-6">{article.title}</h1>
@@ -167,7 +174,7 @@ export default function ArticleClient({ article }) {
         />
 
         {/* Tags */}
-        {article.tags && (
+        {article.tags && article.tags.length > 0 && (
             <div className="flex flex-wrap gap-3 pt-8 border-t border-white/10 mb-12">
                 {(typeof article.tags === 'string' ? article.tags.split(',') : article.tags).map((tag, i) => (
                     tag.trim() !== "" && (

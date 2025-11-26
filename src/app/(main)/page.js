@@ -7,46 +7,26 @@ import {
 import ThreeJSGlobe from '@/components/globe/ThreeJSGlobe'; 
 import { NewsTicker } from '@/components/news/NewsTicker'; 
 
-// 👇 Ye 2 imports add kiye hain Direct DB access ke liye
-import { connectToDB } from "@/lib/db";
-import News from "@/models/News";
-
-// --- 1. DATA FETCHING (Server Side - Direct DB) ---
-// 🔥 Next.js Cache: Ye request ab 60 second tak cache rahegi
-export const revalidate = 60; 
-
+// --- 1. DATA FETCHING (Server Side with Caching) ---
 async function getHomeData() {
   try {
-    await connectToDB();
+    const apiUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
     
-    // 1. Latest News fetch karo (Ticker aur Main Section ke liye)
-    // Hum top 20 news le rahe hain taaki data kam na pade
-    const rawLatest = await News.find({}).sort({ createdAt: -1 }).limit(20);
+    // 🔥 FIX: 'no-store' hataya aur 'revalidate: 60' lagaya.
+    // Ab ye data 60 second tak cache rahega = INSTANT LOAD.
+    const res = await fetch(`${apiUrl}/api/public/home`, { 
+      next: { revalidate: 60 } 
+    });
     
-    // 2. Technology news fetch karo (Agar alag section hai to, warna optional hai)
-    const rawTech = await News.find({ category: 'technology' }).sort({ createdAt: -1 }).limit(10);
-
-    // Mongoose object ko Plain JSON banana zaroori hai
-    const latestNews = JSON.parse(JSON.stringify(rawLatest));
-    const techNews = JSON.parse(JSON.stringify(rawTech));
-
-    // Data Structure waisa hi banaya jaisa API return karti thi
-    return {
-      success: true,
-      data: {
-        globe: latestNews,      // Globe pe bhi latest news dikhegi
-        latest: latestNews,     // Featured section ke liye
-        technology: techNews    // Tech section ke liye
-      }
-    };
-
+    if (!res.ok) return null;
+    return res.json();
   } catch (error) {
-    console.error("Database Error:", error);
+    console.error("Fetch Error:", error);
     return null;
   }
 }
 
-// --- 2. MARKET STRIP (UI Logic Same Rahega) ---
+// --- 2. MARKET STRIP ---
 const marketData = [
   { symbol: "BTC", price: "$94,230", change: "+2.4%", up: true },
   { symbol: "ETH", price: "$3,450", change: "+1.1%", up: true },
@@ -81,7 +61,7 @@ const MarketStrip = () => {
   );
 };
 
-// --- 3. NOVA PRO AD (UI Logic Same) ---
+// --- 3. NOVA PRO AD ---
 const NovaProAd = () => (
   <div className="relative w-full rounded-3xl overflow-hidden my-20 group cursor-pointer border border-white/10">
     <div className="absolute inset-0 bg-gradient-to-r from-purple-900 via-blue-900 to-teal-900 animate-gradient-x opacity-80"></div>
@@ -118,7 +98,7 @@ const NovaProAd = () => (
 
 // --- 4. MAIN PAGE LAYOUT ---
 export default async function HomePage() {
-  // Fetch Data (Ab ye direct DB se aayega, super fast)
+  // Fetch Data
   const response = await getHomeData();
   const data = response?.data || { globe: [], latest: [], technology: [] };
 
@@ -158,17 +138,16 @@ export default async function HomePage() {
                 </a>
               </div>
               <div className="mt-12 flex justify-center lg:justify-start items-center gap-8 text-sm text-gray-400 font-mono">
-                  <div><span className="block text-2xl font-bold text-white">{data.globe.length}</span><span>Active Hotspots</span></div>
-                  <div className="w-px h-8 bg-white/10"></div>
-                  <div><span className="block text-2xl font-bold text-white">24/7</span><span>AI Coverage</span></div>
+                 <div><span className="block text-2xl font-bold text-white">{data.globe.length}</span><span>Active Hotspots</span></div>
+                 <div className="w-px h-8 bg-white/10"></div>
+                 <div><span className="block text-2xl font-bold text-white">24/7</span><span>AI Coverage</span></div>
               </div>
             </div>
 
             {/* 3D Globe */}
             <div className="lg:w-1/2 h-[50vh] lg:h-[600px] w-full relative mt-10 lg:mt-0 flex items-center justify-center">
                <div className="w-full h-full relative z-10">
-                 {/* Pass Globe Data here */}
-                 <ThreeJSGlobe newsData={data.globe} /> 
+                  <ThreeJSGlobe newsData={data.globe} /> 
                </div>
                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100%] h-[100%] bg-blue-500/20 rounded-full blur-[120px] -z-10 pointer-events-none"></div>
             </div>
@@ -215,7 +194,7 @@ export default async function HomePage() {
             </Link>
             ) : (
               <div className="lg:col-span-7 h-full flex items-center justify-center border border-white/10 rounded-3xl text-gray-500 bg-white/5">
-                  No Featured News Available
+                 No Featured News Available
               </div>
             )}
 

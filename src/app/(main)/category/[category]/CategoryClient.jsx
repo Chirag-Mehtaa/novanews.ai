@@ -6,12 +6,12 @@ import { Search, ChevronLeft, ChevronRight, Clock, ArrowRight, Hash, TrendingUp,
 
 const formatDate = (dateString) => new Date(dateString).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
 
-// --- MINI NEWS CARD (Same as before) ---
+// --- MINI NEWS CARD ---
 const MiniNewsCard = ({ article }) => {
   const categories = Array.isArray(article.category) ? article.category : [article.category];
   return (
     <Link href={`/news/${article.slug}`} className="group block h-full">
-      <div className="w-[280px] h-[220px] bg-[#112240]/30 border border-[#e6f1ff]/5 rounded-xl overflow-hidden hover:border-[#64ffda]/40 transition-all duration-300 hover:shadow-lg hover:shadow-[#64ffda]/5 relative flex flex-col">
+      <div className="w-[280px] h-[220px] bg-[#112240]/30 border border-[#e6f1ff]/5 rounded-xl overflow-hidden hover:border-[#64ffda]/40 transition-all duration-300 hover:shadow-lg hover:shadow-[#64ffda]/5 relative flex flex-col transform transition-transform backface-hidden">
         <div className="h-32 overflow-hidden relative">
           <img 
               src={article.imageUrl || "https://placehold.co/600x400?text=No+Image"} 
@@ -42,9 +42,14 @@ const MiniNewsCard = ({ article }) => {
   );
 };
 
-// --- TICKER ROW (Same as before) ---
-const CategoryTicker = ({ title, icon: Icon, articles = [], speed = "50s", reverse = false }) => {
+// --- TICKER ROW (OPTIMIZED) ---
+const CategoryTicker = ({ title, icon: Icon, articles = [], speed = "150s", reverse = false }) => {
   if (!articles || articles.length === 0) return null;
+  
+  // Data ko duplicate kar rahe hain taaki infinite loop smooth lage
+  // Agar articles kam hain to 3-4 baar repeat kar do
+  const loopArticles = [...articles, ...articles, ...articles, ...articles];
+
   return (
     <div className="mb-12 relative">
         <div className="flex items-center gap-2 mb-4 px-4 sm:px-0">
@@ -53,17 +58,19 @@ const CategoryTicker = ({ title, icon: Icon, articles = [], speed = "50s", rever
             <div className="h-[1px] flex-grow bg-gradient-to-r from-[#64ffda]/20 to-transparent ml-4"></div>
         </div>
         <div className="group relative flex overflow-hidden -mx-4 sm:mx-0 sm:rounded-l-xl">
+            {/* 🔥 OPTIMIZATION: 
+                - 'willChange: transform' GPU ko activate karta hai (No Lag).
+                - Speed props se control hogi.
+            */}
             <div 
                 className={`flex gap-4 animate-marquee hover:pause ${reverse ? 'animate-marquee-reverse' : ''}`}
-                style={{ animationDuration: speed }}
+                style={{ 
+                    animationDuration: speed,
+                    willChange: 'transform' 
+                }}
             >
-                {articles.map((article, i) => (
-                    <div key={article._id || i} className="flex-shrink-0 transform transition-transform duration-300 hover:scale-105 hover:z-20">
-                        <MiniNewsCard article={article} />
-                    </div>
-                ))}
-                 {articles.length > 3 && articles.map((article, i) => (
-                    <div key={`dup-${article._id || i}`} className="flex-shrink-0 transform transition-transform duration-300 hover:scale-105 hover:z-20">
+                {loopArticles.map((article, i) => (
+                    <div key={`${article._id}-${i}`} className="flex-shrink-0 transform transition-transform duration-300 hover:scale-105 hover:z-20">
                         <MiniNewsCard article={article} />
                     </div>
                 ))}
@@ -74,22 +81,25 @@ const CategoryTicker = ({ title, icon: Icon, articles = [], speed = "50s", rever
 };
 
 // --- MAIN COMPONENT ---
-// Ab yeh 'initialNews' prop receive karega Server Component se
 export default function CategoryClient({ initialNews = [] }) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // News ab seedha prop se aa rahi hai, koi loading state nahi chahiye
   const news = initialNews;
 
-  // --- FILTERING logic same as before ---
+  // --- FILTERING ---
   const filteredNews = news.filter(n => n.title.toLowerCase().includes(searchTerm.toLowerCase()));
 
   // Featured Logic
   const realFeatured = filteredNews.filter(n => !!n.isFeatured);
   const featuredStories = realFeatured.length > 0 ? realFeatured : filteredNews.slice(0, 5);
 
-  const filterByCat = (cat) => filteredNews.filter(n => n.category.includes(cat));
+  const filterByCat = (cat) => filteredNews.filter(n => {
+       // Safe check for string or array category
+       if (Array.isArray(n.category)) return n.category.some(c => c.toLowerCase() === cat.toLowerCase());
+       return n.category && n.category.toLowerCase() === cat.toLowerCase();
+  });
+
   const techNews = filterByCat('Technology');
   const businessNews = filterByCat('Business');
   const scienceNews = filterByCat('Science');
@@ -141,9 +151,11 @@ export default function CategoryClient({ initialNews = [] }) {
                                     <div className="absolute bottom-8 left-8 right-8 md:max-w-xl">
                                         <div className="backdrop-blur-md bg-[#0a192f]/60 border border-[#e6f1ff]/10 p-6 rounded-2xl shadow-xl animate-fade-in-up">
                                             <div className="flex gap-1 mb-2">
-                                                {story.category.map((cat, i) => (
+                                                {Array.isArray(story.category) ? story.category.map((cat, i) => (
                                                     <span key={i} className="px-2 py-0.5 bg-[#64ffda] text-[#0a192f] text-[10px] font-extrabold uppercase rounded inline-block">{cat}</span>
-                                                ))}
+                                                )) : (
+                                                    <span className="px-2 py-0.5 bg-[#64ffda] text-[#0a192f] text-[10px] font-extrabold uppercase rounded inline-block">{story.category}</span>
+                                                )}
                                             </div>
                                             <h1 className="text-2xl md:text-3xl font-bold text-[#e6f1ff] mb-3 leading-tight font-serif hover:text-[#64ffda] transition-colors">{story.title}</h1>
                                             <div className="text-[#64ffda] hover:text-[#e6f1ff] transition-colors flex items-center gap-1 text-sm font-bold">Read Now <ArrowRight size={14} /></div>
@@ -168,7 +180,7 @@ export default function CategoryClient({ initialNews = [] }) {
                                 <div className="relative h-full w-full rounded-lg overflow-hidden border border-[#112240] shadow-lg bg-[#112240]/30 flex">
                                     <div className="w-1/3 h-full relative"><img src={story.imageUrl || "https://placehold.co/400x300"} className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-100" alt={story.title} /></div>
                                     <div className="w-2/3 p-4 flex flex-col justify-center bg-[#112240]/40">
-                                        <span className="text-[9px] font-bold text-[#64ffda] uppercase mb-1">{story.category[0]}</span>
+                                        <span className="text-[9px] font-bold text-[#64ffda] uppercase mb-1">{Array.isArray(story.category) ? story.category[0] : story.category}</span>
                                         <h3 className="text-sm font-bold text-[#e6f1ff] leading-snug line-clamp-2 group-hover:text-[#64ffda]">{story.title}</h3>
                                     </div>
                                 </div>
@@ -184,12 +196,13 @@ export default function CategoryClient({ initialNews = [] }) {
             </div>
         )}
 
-        {/* Categories */}
-        <CategoryTicker title="Latest News" icon={Zap} articles={filteredNews.slice(0, 10)} speed="55s" />
-        <CategoryTicker title="Technology" icon={Monitor} articles={techNews} speed="60s" />
-        <CategoryTicker title="Business" icon={TrendingUp} articles={businessNews} speed="65s" reverse={true} />
-        <CategoryTicker title="Science" icon={Microscope} articles={scienceNews} speed="70s" reverse={true} />
-        <CategoryTicker title="Entertainment" icon={Film} articles={entNews} speed="50s" />
+        {/* Categories Tickers - SLOW SPEED SET HERE */}
+        {/* Maine speed ko 150s - 200s range me daal diya hai */}
+        <CategoryTicker title="Latest News" icon={Zap} articles={filteredNews.slice(0, 10)} speed="150s" />
+        <CategoryTicker title="Technology" icon={Monitor} articles={techNews} speed="180s" />
+        <CategoryTicker title="Business" icon={TrendingUp} articles={businessNews} speed="200s" reverse={true} />
+        <CategoryTicker title="Science" icon={Microscope} articles={scienceNews} speed="190s" reverse={true} />
+        <CategoryTicker title="Entertainment" icon={Film} articles={entNews} speed="160s" />
 
         <style jsx global>{`
             @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
@@ -200,6 +213,9 @@ export default function CategoryClient({ initialNews = [] }) {
             .custom-scrollbar::-webkit-scrollbar { width: 4px; }
             .custom-scrollbar::-webkit-scrollbar-track { background: #0a192f; }
             .custom-scrollbar::-webkit-scrollbar-thumb { background: #112240; border-radius: 10px; }
+            
+            /* Add backface-visibility hidden for smoother fonts during transform */
+            .backface-hidden { backface-visibility: hidden; }
         `}</style>
       </div>
     </div>
